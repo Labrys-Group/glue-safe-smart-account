@@ -38,13 +38,15 @@ import "./src/tasks/deploy_contracts";
 import "./src/tasks/show_codesize";
 import { BigNumber } from "@ethersproject/bignumber";
 import { DeterministicDeploymentInfo } from "hardhat-deploy/dist/types";
+import { DETERMINISTIC_FACTORIES } from "./src/helpers/hardhat-config-helpers";
 
 const defaultSolidityVersion = "0.7.6";
 const primarySolidityVersion = SOLIDITY_VERSION || defaultSolidityVersion;
 const soliditySettings = SOLIDITY_SETTINGS ? JSON.parse(SOLIDITY_SETTINGS) : undefined;
 
 const deterministicDeployment = (network: string): DeterministicDeploymentInfo => {
-    const info = getSingletonFactoryInfo(parseInt(network));
+    const info = getSingletonFactoryInfo(parseInt(network)) || DETERMINISTIC_FACTORIES[parseInt(network)];
+
     if (!info) {
         throw new Error(`
         Safe factory not found for network ${network}. You can request a new deployment at https://github.com/safe-global/safe-singleton-factory.
@@ -116,6 +118,10 @@ const userConfig: HardhatUserConfig = {
             ...sharedNetworkConfig,
             url: `https://api.avax.network/ext/bc/C/rpc`,
         },
+        glueTestnet: {
+            ...sharedNetworkConfig,
+            url: `https://testnet-ws-1.server-1.glue.net`,
+        },
     },
     deterministicDeployment,
     namedAccounts: {
@@ -125,7 +131,18 @@ const userConfig: HardhatUserConfig = {
         timeout: 2000000,
     },
     etherscan: {
-        apiKey: ETHERSCAN_API_KEY,
+        apiKey: ETHERSCAN_API_KEY || "",
+        customChains: [
+            // npx hardhat --network glueTestnet etherscan-verify --api-url https://explorer.testnet.dev.gke.glue.net/
+            {
+                network: "glueTestnet",
+                chainId: 1300,
+                urls: {
+                    apiURL: "https://backend.explorer.testnet.dev.gke.glue.net/api",
+                    browserURL: "https://explorer.testnet.dev.gke.glue.net",
+                },
+            },
+        ],
     },
 };
 if (NODE_URL) {
